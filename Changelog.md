@@ -1,6 +1,6 @@
 **V1.10.8 - Updates**
-- Fixed a bug in RA Autohoming
-- Cleaned up logging some more
+- Add initial unit test structure
+- Unit tests for MappedDict.hpp
 
 **V1.10.7 - Updates**
 - Fix Arduino IDE issues
