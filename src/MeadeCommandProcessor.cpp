@@ -1680,6 +1680,21 @@ String MeadeCommandProcessor::handleMeadeExtraCommands(String inCmd)
                 {
                     _mount->clearDecLimitPosition(true);
                 }
+                else if ((inCmd[3] >= '0' && inCmd[3] <= '9') || inCmd[3] == '-') // :XSDL<lower>|<upper>
+                {
+                    int index = inCmd.indexOf('|');
+                    if(index > 0)
+                    {
+                        String lower = inCmd.substring(3, index);
+                        String upper = inCmd.substring(index + 1);
+                        _mount->setDecLimitPosition(false, lower.toInt());
+                        _mount->setDecLimitPosition(true, upper.toInt());
+                    }
+                    else
+                    {
+                        return String("0#");
+                    }
+                }
             }
             else if ((inCmd.length() > 3) && (inCmd[2] == 'P'))  // :XSDP
             {
