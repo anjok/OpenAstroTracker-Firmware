@@ -1,0 +1,6 @@
+[submodule "src/libs/SlowSoftWire"]
+	path = src/libs/SlowSoftWire
+	url = https://github.com/felias-fogg/SlowSoftWire.git
+[submodule "src/libs/SlowSoftI2CMaster"]
+	path = src/libs/SlowSoftI2CMaster
+	url = https://github.com/felias-fogg/SlowSoftI2CMaster.git
