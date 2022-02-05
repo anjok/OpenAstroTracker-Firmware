@@ -11,6 +11,7 @@ class Gyro
   public:
     static void startup();
     static void shutdown();
+    static void calibrate();
     static angle_t getCurrentAngles();
     static float getCurrentTemperature();
 

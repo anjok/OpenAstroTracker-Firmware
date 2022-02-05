@@ -91,6 +91,7 @@ void stepperControlTimerCallback(void *payload)
 /////////////////////////////////
 void setup()
 {
+    Serial.begin(SERIAL_BAUDRATE);
 #if defined(OAT_DEBUG_BUILD)
     #if BOARD < 1000
     debug_init();  // Setup avr-stub
@@ -413,4 +414,7 @@ void setup()
 
     mount.bootComplete();
     LOGV1(DEBUG_ANY, F("[SYSTEM]: Boot complete!"));
+#ifdef DEBUG_START_LEVEL
+    Debug::setCurrentDebugMask(DEBUG_START_LEVEL);
+#endif
 }

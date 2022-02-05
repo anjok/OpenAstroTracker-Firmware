@@ -14,6 +14,8 @@ unsigned long RealTime::_suspendStart = 0;
 int RealTime::_suspended              = 0;
 #endif
 
+static u16 debugMask = DEBUG_LEVEL;
+
 #if BUFFER_LOGS == true
     #define LOG_BUFFER_SIZE 512
 char logBuffer[LOG_BUFFER_SIZE];
@@ -360,6 +362,10 @@ String format(const char *input, ...)
 
 void logv(int levelFlags, String input, ...)
 {
+    if(!(debugMask & levelFlags)) {
+        return;
+    }
+
     if ((levelFlags & DEBUG_LEVEL) != 0)
     {
         unsigned long now = millis();
@@ -368,7 +374,7 @@ void logv(int levelFlags, String input, ...)
     #if BUFFER_LOGS == true
         addToLogBuffer(formatArg(input.c_str(), argp));
     #else
-        Serial.print("[");
+        Serial.print("@[");
         Serial.print(String(now));
         Serial.print("]:");
         Serial.print(String(freeMemory()));
@@ -379,5 +385,98 @@ void logv(int levelFlags, String input, ...)
         va_end(argp);
     }
 }
-
 #endif
+
+static const u16 enabledDebugMask      = DEBUG_ANY;
+static const String debugMaskStrings[] = {String("INFO"),
+                                          String("SERIAL"),
+                                          String("WIFI"),
+                                          String("MOUNT"),
+                                          String("MOUNT_VERBOSE"),
+                                          String("GENERAL"),
+                                          String("MEADE"),
+                                          String("VERBOSE"),
+                                          String("STEPPERS"),
+                                          String("EEPROM"),
+                                          String("GYRO"),
+                                          String("GPS"),
+                                          String("FOCUS")};
+static const String NONE               = String("NONE");
+static const String ANY                = String("ANY");
+
+static String getLevelStringForMask(u16 mask)
+{
+    String result = String();
+    for (size_t i = 0; i < sizeof(debugMaskStrings) / sizeof(debugMaskStrings[0]); i++)
+    {
+        if (mask & (1 << i))
+        {
+            result.concat(debugMaskStrings[i]);
+            result.concat("|");
+        }
+    }
+    return result.charAt(result.length() - 1) == '|' ? result.substring(0, result.length() - 1) : result;
+}
+
+void Debug::setCurrentDebugMask(String maskString)
+{
+    if (maskString == NONE || maskString.length() == 0)
+    {
+        debugMask = DEBUG_NONE;
+    }
+    else if (maskString == ANY)
+    {
+        debugMask = DEBUG_ANY;
+    }
+    else
+    {
+        int index = 0, start = 0, len = maskString.length();
+        u16 level = 0;
+        while (index <= len)
+        {
+            if (index == len || maskString.charAt(index) == '|')
+            {
+                String substring = maskString.substring(start, index);
+                int bit          = -1;
+                for (size_t i = 0; i < sizeof(debugMaskStrings) / sizeof(debugMaskStrings[0]); i++)
+                {
+                    //LOGV3(DEBUG_ANY, "sub: %s mask: %s", substring.c_str(), debugMaskStrings[i].c_str());
+                    if (debugMaskStrings[i] == substring)
+                    {
+                        bit = i;
+                        break;
+                    }
+                }
+                if (bit >= 0)
+                {
+                    level |= (1 << bit);
+                }
+                //LOGV6(DEBUG_ANY, "sub: %s bit: %d start: %d index: %d level: %x", substring.c_str(), bit, start, index, level);
+                start = index + 1;
+            }
+            index++;
+        }
+        debugMask = level;
+    }
+}
+
+String Debug::getCurrentDebugMask()
+{
+    if (debugMask == DEBUG_NONE)
+    {
+        return NONE;
+    }
+    else if (debugMask == DEBUG_ANY)
+    {
+        return ANY;
+    }
+    else
+    {
+        return getLevelStringForMask(debugMask);
+    }
+}
+
+String Debug::getEnabledDebugMask()
+{
+    return getLevelStringForMask(enabledDebugMask);
+}

@@ -3281,6 +3281,22 @@ void Mount::moveSteppersTo(float targetRASteps, float targetDECSteps)
         targetRASteps -= _backlashCorrectionSteps;
         _correctForBacklash = true;
     }
+#define RA_MAX_HOURS 7
+    float raStart = 0; // that right?
+    float raStepsPerHour = _stepsPerRADegree * (float)(360. / 24.);
+    float raMaxSteps = RA_MAX_HOURS * raStepsPerHour;
+    float raMin  = (raStart - raMaxSteps );
+    float raMax  = (raStart + raMaxSteps );
+    if (targetRASteps < raMin)
+    {
+        LOGV2(DEBUG_MOUNT, F("Mount::MoveSteppersTo: RA Lower Limit enforced. To: %f"), targetRASteps);
+        targetRASteps = raMin;
+    }
+    if (targetRASteps > raMax)
+    {
+        LOGV2(DEBUG_MOUNT, F("Mount::MoveSteppersTo: RA Upper Limit enforced. To: %f"), targetRASteps);
+        targetRASteps = raMax;
+    }
 
     _stepperRA->moveTo(targetRASteps);
 

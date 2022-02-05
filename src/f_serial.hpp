@@ -42,8 +42,9 @@ void processSerialData()
         {
             if (buffer[0] == 0x06)
             {
+    #if DEBUG_LEVEL & DEBUG_SERIAL
                 LOGV1(DEBUG_SERIAL, F("[SERIAL]: Received: ACK request, replying 1"));
-    #if DEBUG_LEVEL == DEBUG_NONE
+    #else
                 Serial.print('1');
     #endif
             }
@@ -55,8 +56,9 @@ void processSerialData()
                 String retVal = MeadeCommandProcessor::instance()->processCommand(inCmd);
                 if (retVal != "")
                 {
+    #if DEBUG_LEVEL & DEBUG_SERIAL
                     LOGV2(DEBUG_SERIAL, F("[SERIAL]: RepliedWith:  [%s]"), retVal.c_str());
-    #if DEBUG_LEVEL == DEBUG_NONE
+    #else
                     Serial.print(retVal);
     #endif
                 }

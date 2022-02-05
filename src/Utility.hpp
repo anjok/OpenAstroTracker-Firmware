@@ -10,6 +10,13 @@
 String getLogBuffer();
 int freeMemory();
 
+class Debug {
+  public:
+    static void setCurrentDebugMask(String mask);
+    static String getEnabledDebugMask();
+    static String getCurrentDebugMask();
+};
+
 #if DEBUG_LEVEL > 0
 
     #define LOGV1(level, a)                      logv((level), (a))

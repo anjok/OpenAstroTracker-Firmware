@@ -719,6 +719,38 @@ bool gpsAqcuisitionComplete(int &indicator);  // defined in c72_menuHA_GPS.hpp
 //      Returns:
 //        "float#"
 //
+// :XGDM#
+//      Description:
+//        Get Debug Mask
+//      Information:
+//         String showing the current debug mask.
+//      Returns:
+//        eg. NONE, INFO|GENERAL or ANY
+//      Parameters:
+//           NONE          = 0x0000  // No debug output (release build)
+//           INFO          = 0x0001  // General output, like startup variables and status
+//           SERIAL        = 0x0002  // Serial commands and replies
+//           WIFI          = 0x0004  // Wifi related output
+//           MOUNT         = 0x0008  // Mount processing output
+//           MOUNT_VERBOSE = 0x0010  // Verbose mount processing (coordinates, etc)
+//           GENERAL       = 0x0020  // Other misc. output
+//           MEADE         = 0x0040  // Meade command handling output
+//           VERBOSE       = 0x0080  // High-rate mount activity, incl. stepper servicing
+//           STEPPERS      = 0x0100  // Stepper motor-related activity
+//           EEPROM        = 0x0200  // Storing and retrieval of non-volatile configuration data
+//           GYRO          = 0x0400  // Gyro activity (tilt/roll) calibration
+//           GPS           = 0x0800  // GPS activity
+//           FOCUS         = 0x1000  // Focuser activity
+//           ANY           = 0xFFFF  // All debug output
+//
+// :XGDME#
+//      Description:
+//        Get the possible debug mask values.
+//      Information:
+//         See XGDM for the possible values.
+//      Returns:
+//        INFO|SERIAL|WIFI|MOUNT|MOUNT_VERBOSE|GENERAL|MEADE|VERBOSE|STEPPERS|EEPROM|GYRO|GPS|FOCUS#
+//
 // :XGDL#
 //      Description:
 //        Get DEC limits
@@ -933,6 +965,14 @@ bool gpsAqcuisitionComplete(int &indicator);  // defined in c72_menuHA_GPS.hpp
 //        nothing
 //      Remarks:
 //        Must be in manual slewing mode.
+//
+// :XSDMMEADE#
+//      Description:
+//        Set Debug Mask to the named mask (eg NONE, INFO|GENERAL or ANY)
+//      Information:
+//         String to set the current debug mask to.
+//      Returns:
+//        nothing
 //
 //------------------------------------------------------------------
 // FOCUS FAMILY
@@ -1267,7 +1307,7 @@ String MeadeCommandProcessor::handleMeadeSetInfo(String inCmd)
     }
     else if (inCmd[0] == 'H')
     {
-        if (inCmd[1] == 'L')
+        if (inCmd[1] == 'L') // :SHL1610#
         {
             // Set LST
             int hLST   = inCmd.substring(2, 4).toInt();
@@ -1327,19 +1367,19 @@ String MeadeCommandProcessor::handleMeadeSetInfo(String inCmd)
         _mount->setLongitude(lon);
         return "1";
     }
-    else if (inCmd[0] == 'G')  // utc offset :SG+05#
+    else if (inCmd[0] == 'G')  // utc offset :SG+01#
     {
         int offset = inCmd.substring(1, 4).toInt();
         _mount->setLocalUtcOffset(offset);
         return "1";
     }
-    else if (inCmd[0] == 'L')  // Local time :SL19:33:03#
+    else if (inCmd[0] == 'L')  // Local time :SL09:33:03#
     {
         _mount->setLocalStartTime(DayTime::ParseFromMeade(inCmd.substring(1)));
         return "1";
     }
     else if (inCmd[0] == 'C')
-    {  // Set Date (MM/DD/YY) :SC04/30/20#
+    {  // Set Date (MM/DD/YY) :SC02/05/20#
         int month = inCmd.substring(1, 3).toInt();
         int day   = inCmd.substring(4, 6).toInt();
         int year  = 2000 + inCmd.substring(7, 9).toInt();
@@ -1585,6 +1625,20 @@ String MeadeCommandProcessor::handleMeadeExtraCommands(String inCmd)
                 {
                     return String(_mount->getDecParkingOffset()) + "#";
                 }
+                if (inCmd[2] == 'M')  // :XGDM#
+                {
+                    if(inCmd.length() == 4) 
+                    {
+                        if(inCmd[3] == 'E')  // :XGDME#
+                        {
+                            return Debug::getEnabledDebugMask() + "#";
+                        }
+                    } 
+                    else 
+                    {
+                        return Debug::getCurrentDebugMask() + "#";
+                    }
+                }
             }
             else  // :XGD#
             {
@@ -1705,6 +1759,11 @@ String MeadeCommandProcessor::handleMeadeExtraCommands(String inCmd)
             {
                 _mount->setDecParkingOffset(inCmd.substring(3).toInt());
             }
+            else if (inCmd[2] == 'M')  // :XSDMINFO|GENERAL|GYRO# :XSDMINFO|XXX|GYRO# :XGDM#
+            {
+                Debug::setCurrentDebugMask(inCmd.substring(3));
+                return Debug::getCurrentDebugMask() + "#";
+            }
             else
             {
                 _mount->setStepsPerDegree(DEC_STEPS, inCmd.substring(2).toFloat());
@@ -1744,16 +1803,16 @@ String MeadeCommandProcessor::handleMeadeExtraCommands(String inCmd)
 #if USE_GYRO_LEVEL == 1
         if (inCmd[1] == 'G')
         {                         // get values
-            if (inCmd[2] == 'R')  // :XLGR
+            if (inCmd[2] == 'R')  // :XLGR#
             {                     // get Calibration/Reference values
                 return String(_mount->getPitchCalibrationAngle(), 4) + "," + String(_mount->getRollCalibrationAngle(), 4) + "#";
             }
-            else if (inCmd[2] == 'C')  // :XLGC
+            else if (inCmd[2] == 'C')  // :XLGC#
             {                          // Get current values
                 auto angles = Gyro::getCurrentAngles();
                 return String(angles.pitchAngle, 4) + "," + String(angles.rollAngle, 4) + "#";
             }
-            else if (inCmd[2] == 'T')  // :XLGT
+            else if (inCmd[2] == 'T')  // :XLGT#
             {                          // Get current temp
                 float temp = Gyro::getCurrentTemperature();
                 return String(temp, 1) + "#";
@@ -1771,6 +1830,11 @@ String MeadeCommandProcessor::handleMeadeExtraCommands(String inCmd)
                 _mount->setRollCalibrationAngle(inCmd.substring(3).toFloat());
                 return String("1#");
             }
+        }
+        else if (inCmd[1] == 'C')  // :XLC
+        {                          // Calibrate Gyro
+            Gyro::calibrate();
+            return String("1#");
         }
         else if (inCmd[1] == '1')  // :XL1
         {                          // Turn on Gyro

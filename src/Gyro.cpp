@@ -42,11 +42,19 @@ void Gyro::startup()
 */
 {
     // Initialize interface to the MPU6050
-    LOGV1(DEBUG_INFO, F("GYRO:: Starting"));
+    LOGV1(DEBUG_INFO, F("[GYRO]:: Starting"));
     i2c.begin();
 #if GYRO_USE_MPU9250
     MPU9250Setting setting = MPU9250Setting();
+    gyro.verbose(true);
     gyro.setup(0x68, setting, i2c);
+    if(!gyro.isConnected()) {
+        LOGV1(DEBUG_INFO, F("GYRO:: Not found!"));
+        return;
+    }
+    isPresent = true;
+    angle_t current = getCurrentAngles();
+    LOGV4(DEBUG_INFO, F("GYRO:: Pitch=%f Roll=%f Temp=%f"), current.pitchAngle, current.rollAngle, getCurrentTemperature());
 #else
     // Execute 1 byte read from MPU6050_REG_WHO_AM_I
     // This is a read-only register which should have the value 0x68
@@ -78,6 +86,21 @@ void Gyro::startup()
     LOGV1(DEBUG_INFO, F("[GYRO]:: Started"));
 }
 
+void Gyro::calibrate()
+/* Calibrates the gyro+magnetometer
+*/
+{
+#if GYRO_USE_MPU9250
+    gyro.verbose(true);
+    LOGV1(DEBUG_INFO, F("GYRO: calibrate gyro"));
+    gyro.calibrateAccelGyro();
+    LOGV1(DEBUG_INFO, F("GYRO: calibrate mag"));
+    gyro.calibrateMag();
+    gyro.verbose(false);
+#else
+#endif
+    // Nothing to do
+}
 void Gyro::shutdown()
 /* Shuts down the MPU-6050 device.
    Currently does nothing.
@@ -94,9 +117,18 @@ angle_t Gyro::getCurrentAngles()
 {
     struct angle_t result;
 #if GYRO_USE_MPU9250
-    gyro.update();
-    result.pitchAngle = gyro.getPitch();
-    result.rollAngle = gyro.getRoll();
+    int tries = 10;
+    while(tries-- > 0)
+    {
+        if(gyro.update()) {
+            result.pitchAngle = gyro.getPitch();
+            result.rollAngle = gyro.getRoll();
+            return result;
+        }
+        LOGV1(DEBUG_INFO, F("GYRO: waiting for input"));
+        delay(100);
+    }
+    LOGV1(DEBUG_INFO, F("GYRO: no results"));
 #else
     // Read the accelerometer data
     const int windowSize = 16;
