@@ -51,6 +51,7 @@ void Longitude::checkHours()
 #endif
 }
 
+// NOTE: Meade values are negated, ie you get -11.11 when you are at 11.11 E
 Longitude Longitude::ParseFromMeade(String const &s)
 {
     Longitude result(0.0);
