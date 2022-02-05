@@ -64,10 +64,11 @@ int Sidereal::calculateDeltaJd(int year, int month, int day)
 
 DayTime Sidereal::calculateHa(float lstTotalHours)
 {
-    float lstDeg = lstTotalHours * 15;  //to deg
+    float lstDeg = lstTotalHours * 15.0f;  //to deg
 
-    //subtract Poloars RA
-    lstDeg -= ((POLARIS_RA_SECOND / 3600.0f + POLARIS_RA_MINUTE / 60.0f + POLARIS_RA_HOUR) * 15.0f);
+    //subtract Polaris RA
+    //lstDeg -= ((((POLARIS_RA_SECOND / 60.0f) + POLARIS_RA_MINUTE) / 60.0f) + POLARIS_RA_HOUR) * 15.0f;
+    lstDeg -= ((POLARIS_RA_SECOND / 3600.0f) + (POLARIS_RA_MINUTE / 60.0f) + POLARIS_RA_HOUR) * 15.0f;
 
     //ensure positive deg
     while (lstDeg < 0.0f)
