@@ -247,6 +247,9 @@ class Mount
     // there. Must call loop() frequently to actually move.
     void startSlewingToTarget();
 
+    // Sends the mount to the home position
+    void startSlewingToHome();
+
     // Various status query functions
     bool isSlewingDEC() const;
     bool isSlewingRA() const;
@@ -290,12 +293,6 @@ class Mount
     // Low-leve process any stepper movement on interrupt callback.
     void interruptLoop();
 
-    // Set RA and DEC to the home position
-    void setTargetToHome();
-
-    // Asynchronously slews the mount to the home position
-    void goHome();
-
     // Set the current stepper positions to be home.
     void setHome(bool clearZeroPos);
 
@@ -332,11 +329,8 @@ class Mount
     // Runs the RA motor at twice the speed (or stops it), or the DEC motor at tracking speed for the given duration in ms.
     void guidePulse(byte direction, int duration);
 
-    // Stops any guide operation in progress.
-    void stopGuiding();
-
     // Stops given guide operations in progress.
-    void stopGuiding(bool ra, bool dec);
+    void stopGuiding(bool ra = true, bool dec = true);
 
     // Return a string of DEC in the given format. For LCDSTRING, active determines where the cursor is
     String DECString(byte type, byte active = 0);
@@ -384,6 +378,7 @@ class Mount
 #if USE_HALL_SENSOR_RA_AUTOHOME == 1
     bool findRAHomeByHallSensor(int initialDirection, int searchDistance);
     void processRAHomingProgress();
+    String getHomingState(HomingState state) const;
 #endif
     void setHomingOffset(StepperAxis axis, long offset);
     long getHomingOffset(StepperAxis axis);
@@ -408,6 +403,9 @@ class Mount
 
     // Get info about the configured steppers and drivers
     String getStepperInfo();
+
+    // Debug helper
+    void setTrackingStepperPos(long stepPos);
 
     // Returns a flag indicating whether the mount is fully booted.
     bool isBootComplete();
