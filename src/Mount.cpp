@@ -1399,72 +1399,6 @@ void Mount::startSlewingToHome()
 // stopGuiding
 //
 /////////////////////////////////
-// Calculates movement parameters and program steppers to move to home position.
-// Takes any sync operations that have happened and tracking into account.
-void Mount::startSlewingToHome()
-{
-    stopGuiding();
-
-    // Make sure we're slewing at full speed on a GoTo
-    LOGV2(DEBUG_STEPPERS, F("[STEPPERS]: startSlewingToHome: Set DEC to MaxSpeed(%d)"), _maxDECSpeed);
-    _stepperDEC->setMaxSpeed(_maxDECSpeed);
-    LOGV2(DEBUG_STEPPERS, F("[STEPPERS]: startSlewingToHome: Set RA  to MaxSpeed(%d)"), _maxRASpeed);
-    _stepperRA->setMaxSpeed(_maxRASpeed);
-
-    _currentDECStepperPosition = _stepperDEC->currentPosition();
-    _currentRAStepperPosition  = _stepperRA->currentPosition();
-
-    // Take any syncs that have happened into account
-    long targetRAPosition  = -_homeOffsetRA;
-    long targetDECPosition = -_homeOffsetDEC;
-    LOGV3(DEBUG_STEPPERS, F("[STEPPERS]: startSlewingToHome: Sync op offsets: RA: %l, DEC: %l"), targetRAPosition, targetDECPosition);
-
-    _slewingToHome = true;
-    // Take tracking into account
-    long trackingOffset = _stepperTRK->currentPosition() * RA_SLEW_MICROSTEPPING / RA_TRACKING_MICROSTEPPING;
-    targetRAPosition -= trackingOffset;
-    LOGV4(DEBUG_STEPPERS,
-          F("[STEPPERS]: startSlewingToHome: Adjusted with tracking distance: %l (adjusted for MS: %l), result: %l"),
-          _stepperTRK->currentPosition(),
-          trackingOffset,
-          targetRAPosition);
-
-    moveSteppersTo(targetRAPosition, targetDECPosition);  // u-steps (in slew mode)
-
-    _mountStatus |= STATUS_SLEWING | STATUS_SLEWING_TO_TARGET;
-    _totalDECMove = 1.0f * _stepperDEC->distanceToGo();
-    _totalRAMove  = 1.0f * _stepperRA->distanceToGo();
-    LOGV3(DEBUG_MOUNT, F("[MOUNT]: RA Dist: %l,   DEC Dist: %l"), _stepperRA->distanceToGo(), _stepperDEC->distanceToGo());
-    if ((_stepperRA->distanceToGo() != 0) || (_stepperDEC->distanceToGo() != 0))
-    {
-        // Only stop tracking if we're actually going to slew somewhere else, otherwise the
-        // mount::loop() code won't detect the end of the slewing operation...
-        LOGV1(DEBUG_STEPPERS, F("[MOUNT]: Stop tracking (NEMA steppers)"));
-        stopSlewing(TRACKING);
-        _trackerStoppedAt        = millis();
-        _compensateForTrackerOff = false;
-
-// set Slew microsteps for TMC2209 UART once the TRK stepper has stopped
-#if RA_DRIVER_TYPE == DRIVER_TYPE_TMC2209_UART
-        LOGV2(DEBUG_STEPPERS, F("[STEPPERS]: startSlewingToHome: Switching RA driver to microsteps(%d)"), RA_SLEW_MICROSTEPPING);
-        _driverRA->microsteps(RA_SLEW_MICROSTEPPING == 1 ? 0 : RA_SLEW_MICROSTEPPING);
-#endif
-
-        LOGV2(DEBUG_STEPPERS, F("[STEPPERS]: startSlewingToHome: TRK stopped at %lms"), _trackerStoppedAt);
-    }
-
-#if DEC_DRIVER_TYPE == DRIVER_TYPE_TMC2209_UART
-    // Since normal state for DEC is guide microstepping, switch to slew microstepping here.
-    LOGV2(DEBUG_STEPPERS, F("[STEPPERS]: startSlewingToHome: Switching DEC driver to microsteps(%d)"), DEC_SLEW_MICROSTEPPING);
-    _driverDEC->microsteps(DEC_SLEW_MICROSTEPPING == 1 ? 0 : DEC_SLEW_MICROSTEPPING);
-#endif
-}
-
-/////////////////////////////////
-//
-// stopGuiding
-//
-/////////////////////////////////
 void Mount::stopGuiding(bool ra, bool dec)
 {
     if (isGuiding())
@@ -1733,20 +1667,6 @@ void Mount::park()
     _mountStatus |= STATUS_PARKING;
 }
 
-<<<<<<< HEAD
-=======
-/////////////////////////////////
-//
-// goHome
-//
-// Synchronously moves mount to home position
-/////////////////////////////////
-void Mount::goHome()
-{
-    startSlewingToHome();
-}
-
->>>>>>> V1.10.6 - Updates
 #if (AZ_STEPPER_TYPE != STEPPER_TYPE_NONE)
 /////////////////////////////////
 //
@@ -3046,11 +2966,7 @@ void Mount::loop()
                 _currentDECStepperPosition = _stepperDEC->currentPosition();
                 _currentRAStepperPosition  = _stepperRA->currentPosition();
 #if RA_DRIVER_TYPE == DRIVER_TYPE_TMC2209_UART
-<<<<<<< HEAD
-                if (!isFindingHome())  // When finding home, we never want to switch back to tracking until homing is finished.
-=======
                 if (!isFindingHome()) // When finding home, we never want to switch back to tracking until homing is finished.
->>>>>>> V1.10.6 - Updates
                 {
                     LOGV2(DEBUG_STEPPERS, F("[STEPPERS]: Loop: Arrived. RA driver setMicrosteps(%d)"), RA_TRACKING_MICROSTEPPING);
                     _driverRA->microsteps(RA_TRACKING_MICROSTEPPING == 1 ? 0 : RA_TRACKING_MICROSTEPPING);
@@ -3072,11 +2988,7 @@ void Mount::loop()
                         _compensateForTrackerOff = false;
                     }
 
-<<<<<<< HEAD
-                    if (!isFindingHome())  // If we're homing, RA must stay in Slew configuration
-=======
                     if (!isFindingHome()) // If we're homing, RA must stay in Slew configuration
->>>>>>> V1.10.6 - Updates
                     {
                         startSlewing(TRACKING);
                     }
@@ -3877,6 +3789,9 @@ void Mount::setLocalStartTime(DayTime localTime)
 /////////////////////////////////
 void Mount::setLocalUtcOffset(int offset)
 {
+    #if INDI
+    offset = -offset;
+    #endif
     _localUtcOffset = offset;
     EEPROMStore::storeUtcOffset(_localUtcOffset);
 
